@@ -1,0 +1,566 @@
+---
+title: "STAT 420 - Group Project - Football analytics based on FIFA 2019 players data"
+date: '08/01/2019'
+author: "Blake Weston Nicolls (bwn2), Uttam Roy (uroy) and Balaji Sathyamurthy (balajis2) - Group 101"
+output: 
+  html_document: 
+    toc: yes
+  pdf_document: default
+urlcolor: cyan
+---
+*****
+
+```{r setup, echo = FALSE, message = FALSE, warning = FALSE}
+options(scipen = 1, digits = 4, width = 80, fig.align = "center")
+```
+
+# Team
+
+- Size : 3
+- Details :
+ a. Balaji, Sathyamurthy  (NetID: balajis2)
+ b. Blake Weston, Nicolls (NetID: bwn2)
+ c. Uttam, Roy            (NetID: uroy)
+
+# Project Title
+
+**Football analytics based on FIFA 2019 players data**
+
+# Introduction
+
+The goal of the project is to be able to build a good model and predict the overall rating of the FIFA players based on their skillset data. With the growing popularity of FIFA, in usa we thought that predicting the player rating based on their skillset, wages and physical factors such as age, height, weight etc., is very interesting.
+
+Also the number of observations we have used is around 18k+ with around 46 predictors to make the model more interesting and at the same time give an accurate prediction. As the quote, "All models are wrong, some models are useful",  our goal is to find a useful model for this dataset which can be used for prediction.
+
+As technology has advanced over the last number of years data collection has become more in-depth and can be conducted with relative ease. Advancements in data collection have allowed for sports analytics to grow as well, leading to the development of advanced statistics as well sport specific technologies that allow for things like game simulations to be conducted by teams prior to play, improve fan acquisition and marketing strategies, and even understand the impact of sponsorship on each team as well as its fans which motivated us to chose this topic for the project.
+
+The dataset is acquired from kaggle website and below is the link:
+https://www.kaggle.com/karangadiya/fifa19
+
+Some descriptions about the variables of the dataset:
+
+- Overall : overall rating of the player
+- Age : age of the player
+- heightInch : height of the player in inches
+- WeightLbs : weight of the player in lbs
+- value_k_eu : value of the player in thousands in euro 
+- wage_k_eu : wage of the player in thousands in euro
+- rel_tot_value_k : release amount of the player in thousands in euro
+- PreferredFoot : Preferred foot of the player, it is a factor variable, will be used as dummy variable
+- WeakFoot : skillset of week foot
+- Position: position of the player, it is a factor variable
+- JerseyNumber : Jersey Number of the player
+
+other variables are about skills and self explanatory
+
+
+**Dataset**
+
+
+```{r, message = FALSE, warning = FALSE}
+# Loading all necessary Libraries.
+library(readr)
+library(lmtest)
+library(leaps)
+library(knitr)
+library(ggplot2)
+library(faraway)
+library(flextable)
+library(magrittr)
+#install.packages("flextable")
+#install.packages("leaps")
+```
+
+```{r}
+#Reading the data from the FIFA data file
+#FIFA_data = read.csv("FIFA_data.csv",fileEncoding="latin1")
+FIFA_data = read.csv("FIFA_data.csv")
+
+#Subsetting the required data (player skillset, wages and physical factors such as age, height,weight etc.,) from the file to a data frame
+FIFA=data.frame(Overall=FIFA_data$Overall, value_k_eu	=FIFA_data$value_k_eu,	wage_k_eu =FIFA_data$wage_k_eu, rel_tot_value_k = FIFA_data$rel_tot_value_k,	
+Age=FIFA_data$Age, PreferredFoot=FIFA_data$PreferredFoot, WeakFoot=FIFA_data$WeakFoot, SkillMoves=FIFA_data$SkillMoves, Position=FIFA_data$Position, JerseyNumber=FIFA_data$JerseyNumber	, heightInch=FIFA_data$heightInch	, WeightLbs=FIFA_data$WeightLbs	, Crossing=FIFA_data$Crossing	, Finishing=FIFA_data$Finishing	, HeadingAccuracy=FIFA_data$HeadingAccuracy	, ShortPassing=FIFA_data$ShortPassing	, Volleys=FIFA_data$Volleys	, Dribbling=FIFA_data$Dribbling	, Curve=FIFA_data$Curve	, FKAccuracy=FIFA_data$FKAccuracy	, LongPassing=FIFA_data$LongPassing	, BallControl=FIFA_data$BallControl	, Acceleration=FIFA_data$Acceleration	, SprintSpeed=FIFA_data$SprintSpeed	, Agility=FIFA_data$Agility	, Reactions=FIFA_data$Reactions	, Balance=FIFA_data$Balance	, ShotPower=FIFA_data$ShotPower	, Jumping=FIFA_data$Jumping	, Stamina=FIFA_data$Stamina	, Strength=FIFA_data$Strength	, LongShots=FIFA_data$LongShots	, Aggression=FIFA_data$Aggression	, Interceptions=FIFA_data$Interceptions	, Positioning=FIFA_data$Positioning	, Vision=FIFA_data$Vision	, Penalties=FIFA_data$Penalties	, Composure=FIFA_data$Composure	, Marking=FIFA_data$Marking	, StandingTackle=FIFA_data$StandingTackle	, SlidingTackle=FIFA_data$SlidingTackle	, GKDiving=FIFA_data$GKDiving	, GKHandling=FIFA_data$GKHandling	, GKKicking=FIFA_data$GKKicking	, GKPositioning=FIFA_data$GKPositioning	, GKReflexes=FIFA_data$GKReflexes)
+
+# We have some observations with missing data about wages, we will remove those as we are intersted to know how the wages effect overall rating
+# removing data for 0 rel_tot_value_k , value_k_eu , wage_k_eu
+FIFA_data = subset(FIFA_data, rel_tot_value_k > 0)
+FIFA_data = subset(FIFA_data, value_k_eu > 0)
+FIFA_data = subset(FIFA_data, wage_k_eu > 0)
+
+#Removing all the NA data from the data set
+FIFA_data = na.omit(FIFA)
+
+```
+
+A snippet of dataset. (Only first few columns).
+
+`r knitr::kable(head(FIFA_data, n=10)[,1:15])`
+
+
+Structure of the dataset :
+
+```{r}
+# Analyzing the structure of the dataset
+str(FIFA_data)
+```
+
+# Methods
+
+We will split the dataset into training and test dataset. We will use 15% data as training data and 85% of data as test data.
+
+
+```{r}
+# FIFA_DATA has about 18k+  observations, R can not handle all thease data in many different functions, so we will sample some data and work on that
+# Sampling 15% of the dataset for modelling
+set.seed(420)
+fifa_trn_idx  = sample(nrow(FIFA_data), size = trunc(0.15 * nrow(FIFA_data)))
+
+#Split the dataset into training and test dataset
+fifa_trn_data = FIFA_data[fifa_trn_idx, ]
+fifa_tst_data = FIFA_data[-fifa_trn_idx, ]
+
+#Store the number of observations in a variable
+n=nrow(fifa_trn_data)
+
+```
+
+
+
+Our initial simple models are :
+
+```{r}
+#Initial large model with all variables and limited interactions between Age,heightInch and WeightLbs with all other variables
+model_init = lm(Overall ~  Age+ rel_tot_value_k + value_k_eu + wage_k_eu + PreferredFoot+ WeakFoot+ SkillMoves+  heightInch	+ WeightLbs	+ Crossing	+ Finishing	+ HeadingAccuracy	+ ShortPassing	+ Volleys	+ Dribbling	+ Curve	+ FKAccuracy	+ LongPassing	+ BallControl	+ Acceleration	+ SprintSpeed	+ Agility	+ Reactions	+ Balance	+ ShotPower	+ Jumping	+ Stamina	+ Strength	+ LongShots	+ Aggression	+ Interceptions	+ Positioning	+ Vision	+ Penalties	+ Composure	+ Marking	+ StandingTackle	+ SlidingTackle	+ GKDiving	+ GKHandling	+ GKKicking	+ GKPositioning	+ GKReflexes 
+                + Age:( rel_tot_value_k + value_k_eu + wage_k_eu + PreferredFoot+ WeakFoot+ SkillMoves+  heightInch	+ WeightLbs	+ Crossing	+ Finishing	+ HeadingAccuracy	+ ShortPassing	+ Volleys	+ Dribbling	+ Curve	+ FKAccuracy	+ LongPassing	+ BallControl	+ Acceleration	+ SprintSpeed	+ Agility	+ Reactions	+ Balance	+ ShotPower	+ Jumping	+ Stamina	+ Strength	+ LongShots	+ Aggression	+ Interceptions	+ Positioning	+ Vision	+ Penalties	+ Composure	+ Marking	+ StandingTackle	+ SlidingTackle	+ GKDiving	+ GKHandling	+ GKKicking	+ GKPositioning	+ GKReflexes) 
+                + heightInch:( rel_tot_value_k + value_k_eu + wage_k_eu + Age+ PreferredFoot+ WeakFoot+ SkillMoves+  heightInch	+ WeightLbs	+ Crossing	+ Finishing	+ HeadingAccuracy	+ ShortPassing	+ Volleys	+ Dribbling	+ Curve	+ FKAccuracy	+ LongPassing	+ BallControl	+ Acceleration	+ SprintSpeed	+ Agility	+ Reactions	+ Balance	+ ShotPower	+ Jumping	+ Stamina	+ Strength	+ LongShots	+ Aggression	+ Interceptions	+ Positioning	+ Vision	+ Penalties	+ Composure	+ Marking	+ StandingTackle	+ SlidingTackle	+ GKDiving	+ GKHandling	+ GKKicking	+ GKPositioning	+ GKReflexes) 
+                +WeightLbs:( rel_tot_value_k + value_k_eu + wage_k_eu + Age+ PreferredFoot+ WeakFoot+ SkillMoves+  heightInch	+ WeightLbs	+ Crossing	+ Finishing	+ HeadingAccuracy	+ ShortPassing	+ Volleys	+ Dribbling	+ Curve	+ FKAccuracy	+ LongPassing	+ BallControl	+ Acceleration	+ SprintSpeed	+ Agility	+ Reactions	+ Balance	+ ShotPower	+ Jumping	+ Stamina	+ Strength	+ LongShots	+ Aggression	+ Interceptions	+ Positioning	+ Vision	+ Penalties	+ Composure	+ Marking	+ StandingTackle	+ SlidingTackle	+ GKDiving	+ GKHandling	+ GKKicking	+ GKPositioning	+ GKReflexes)
+                + Age:heightInch:WeightLbs,
+            data = fifa_trn_data)
+
+#Simple model with no interactions between Age,heightInch and WeightLbs with all other variables
+model_simple = lm(Overall ~  Age+ rel_tot_value_k + value_k_eu + wage_k_eu + PreferredFoot+ WeakFoot+ SkillMoves+ heightInch	+ WeightLbs	+ Crossing	+ Finishing	+ HeadingAccuracy	+ ShortPassing	+ Volleys	+ Dribbling	+ Curve	+ FKAccuracy	+ LongPassing	+ BallControl	+ Acceleration	+ SprintSpeed	+ Agility	+ Reactions	+ Balance	+ ShotPower	+ Jumping	+ Stamina	+ Strength	+ LongShots	+ Aggression	+ Interceptions	+ Positioning	+ Vision	+ Penalties	+ Composure	+ Marking	+ StandingTackle	+ SlidingTackle	+ GKDiving	+ GKHandling	+ GKKicking	+ GKPositioning	+ GKReflexes ,
+            data = fifa_trn_data)
+
+#Comparing the simple and large model
+pvalue = anova(model_simple,model_init)["2","Pr(>F)"]
+```
+
+
+The p-value is very small `r pvalue` and at an $\alpha$ level of 0.01, we reject the null hypothesis and prefer the larger complex model.
+
+Next we will check the variance and normality of the complex model:
+
+```{r fig.height=10, fig.width=20}
+# Check for the variance and normality for the initial large model using the plots
+
+par(mfrow=c(1,2))
+plot(fitted(model_init), resid(model_init), col = "dodgerblue", pch = 20, xlab = "Fitted", ylab = "Residuals", main = "Fitted vs. Residual plot") 
+abline(h = 0, col = "darkorange", lwd = 2)
+
+qqnorm(resid(model_init), main = "Normal Q-Q Plot", col = "darkgrey") 
+qqline(resid(model_init), col = "dodgerblue", lwd = 2)
+
+bptest_value = bptest(model_init)$p.value
+shp_test_value = shapiro.test(resid(model_init))$p.value
+```
+
+The Fitted vs. Residuals and Normal QQ plots are not ok. 
+
+Also looking at the BP Test and Shapiro Wilk Test
+
+ 1. BP Test (p-value) = `r bptest_value` 
+ 
+ 2. Shapiro Wilk test (p-value) = `r shp_test_value` 
+ 
+suggests the data is not from equal variance and normal distribution.
+
+Next we will check the collinearity of the predictors to find best usefull predictors using variance inflation factor. We will remove the predictors with high collinearity.
+
+```{r}
+#Trying to find a model using VIF
+vif(model_simple)[which(faraway::vif(model_simple) < 5)]
+
+#Building a simple model using the VIF variables
+model_simple1= lm( Overall ~ wage_k_eu 
+                   + Age + heightInch + WeightLbs  
+                   + PreferredFoot + WeakFoot 
+                   + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + 
+                     Vision + Penalties + Composure,data = fifa_trn_data)
+
+#Building a complex model based on simple model and interaction between the variables - wage_k_eu,Age,heightInch,WeightLbs #and wage_k_eu with other variables
+
+model_init1 =  lm( Overall ~ wage_k_eu 
+                              + Age + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                               + Composure
+                              + wage_k_eu : ( Age + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                                + Composure )
+                            + Age:(wage_k_eu + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                               +Composure )
+                            + heightInch: (Age + wage_k_eu + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                               +Composure )
+                            + WeightLbs: (Age + wage_k_eu +  heightInch 
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                               +Composure )
+                            + wage_k_eu:Age:heightInch + wage_k_eu:Age:WeightLbs + Age:heightInch:WeightLbs + wage_k_eu:Age:heightInch:WeightLbs
+                   ,
+                   data = fifa_trn_data)
+
+#Comparing the 3 models using anova
+anova(model_simple,model_simple1)
+anova(model_simple1,model_init1)
+```
+
+Based on the anova test, the larger model after removing collinearity is significant. We will again check the variance and normality of the model:
+
+```{r fig.height=10, fig.width=20}
+# Check for the variance and normality for the initial large model using the plots
+
+par(mfrow=c(1,2))
+
+plot(fitted(model_init1), resid(model_init1), col = "dodgerblue", pch = 20, xlab = "Fitted", ylab = "Residuals", main = "Fitted vs. Residuals plot") 
+abline(h = 0, col = "darkorange", lwd = 2)
+
+qqnorm(resid(model_init1), main = "Normal Q-Q Plot", col = "darkgrey") 
+qqline(resid(model_init1), col = "dodgerblue", lwd = 2)
+
+bptst_value = bptest(model_init1)$p.value
+shptst_value = shapiro.test(resid(model_init1))$p.value
+```
+
+The Fitted vs. Residuals and Normal QQ plots are not ok. 
+
+Also looking at the BP Test and Shapiro Wilk Test
+
+ 1. BP Test (p-value) = `r bptst_value` 
+ 
+ 2. Shapiro Wilk test (p-value) = `r shptst_value` 
+ 
+suggests the data is not from equal variance and normal distribution.
+
+Next we will check for unusal observations using influential and outliners method:
+
+```{r}
+# checking influential and outliers points and removing them from the dataset
+
+influential_points = cooks.distance(model_init1) < 4 / length(cooks.distance(model_init1))
+outliers = abs(rstandard(model_init1)) > 2
+
+remove_points = c(influential_points,outliers)
+
+fifa_trn_data2=  subset(fifa_trn_data,remove_points)     
+nrow(fifa_trn_data2)
+
+#Model using the dataset with the influential and outliers points removed
+
+model_simple2= lm( Overall ~ wage_k_eu 
+                              + Age + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                               + Composure,
+                              data = fifa_trn_data2)
+
+model_init2 =  lm( Overall ~ wage_k_eu 
+                              + Age + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                               + Composure
+                              + wage_k_eu : ( Age + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                               + Composure )
+                              + Age:(wage_k_eu + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                               + Composure )
+                              + heightInch: (Age + wage_k_eu + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                               + Composure )
+                              + WeightLbs: (Age + wage_k_eu +  heightInch 
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision + Penalties                               + Composure )
+                              + wage_k_eu:Age:heightInch + wage_k_eu:Age:WeightLbs + Age:heightInch:WeightLbs +  
+                               wage_k_eu:Age:heightInch:WeightLbs,
+                               data = fifa_trn_data2)
+```
+
+Now we will check the variance and normality of the model and new data:
+
+```{r fig.height=10, fig.width=20}
+#Plotting to check for equal variance and normal distribution
+par(mfrow=c(1,2))
+plot(fitted(model_init2), resid(model_init2), col = "dodgerblue", pch = 20, xlab = "Fitted", ylab = "Residuals", main = "Fitted vs. Residual plot") 
+abline(h = 0, col = "darkorange", lwd = 2)
+
+qqnorm(resid(model_init2), main = "Normal Q-Q Plot", col = "darkgrey") 
+qqline(resid(model_init2), col = "dodgerblue", lwd = 2)
+
+bptst_value = bptest(model_init2)$p.value
+shptst_value = shapiro.test(resid(model_init2))$p.value
+
+n=nrow(fifa_trn_data2)
+```
+
+The Fitted vs. Residuals and Normal QQ plots are much better now.
+
+Also looking at the BP Test and Shapiro Wilk Test
+
+ 1. BP Test (p-value) = `r bptst_value` 
+ 
+ 2. Shapiro Wilk test (p-value) = `r shptst_value` 
+ 
+Shapiro Wilk test is passed now which suggests normality whereas the BP test is getting failed. Since it is a large dataset, we are making an assumption based on the fitted vs. residual that its of equal variance. 
+
+```{r fig.height=10, fig.width=20}
+anova(model_simple2,model_init2)
+```
+
+The anova test suggests the larger model is significant.
+
+Next we will find best predictors of this model using Akaike Information Criterion (AIC) and Bayesian Information Criterion (BIC) methods:
+
+```{r}
+#Using the model search to find the best model
+n=nrow(fifa_trn_data2)
+model_aic=step(model_init2, direction = "backward", trace=0)
+model_bic=step(model_init2, direction = "backward", k=log(n), trace=0)
+
+p=length(coef(model_aic))
+rss = sum((resid(model_aic))^2) 
+value_model_aic = n * log(rss/n) + 2*p
+value_model_aic
+
+p=length(coef(model_bic))
+rss = sum((resid(model_bic))^2) 
+value_model_bic = n * log(rss/n) + log(n)*p
+value_model_bic
+
+min(value_model_aic,value_model_bic)
+
+summary(model_aic)
+```
+
+Based on the AIC/BIC, AIC model is better for this dataset.
+
+The AIC model is :
+
+model_aic = 
+lm( Overall ~ wage_k_eu + Age + heightInch + WeightLbs + 
+    PreferredFoot + SkillMoves + Agility + Reactions + Balance + 
+    Jumping + Stamina + Strength + Aggression + Vision + Penalties + 
+    Composure + wage_k_eu:Age + wage_k_eu:heightInch + wage_k_eu:WeightLbs + 
+    wage_k_eu:SkillMoves + wage_k_eu:Reactions + wage_k_eu:Balance + 
+    wage_k_eu:Jumping + wage_k_eu:Aggression + wage_k_eu:Penalties + 
+    wage_k_eu:Composure + Age:heightInch + Age:WeightLbs + Age:PreferredFoot + 
+    Age:SkillMoves + Age:Reactions + Age:Balance + Age:Strength + 
+    Age:Vision + Age:Penalties + Age:Composure + heightInch:WeightLbs + 
+    heightInch:Agility + heightInch:Reactions + heightInch:Jumping + 
+    heightInch:Stamina + heightInch:Vision + heightInch:Penalties + 
+    heightInch:Composure + WeightLbs:SkillMoves + WeightLbs:Balance + 
+    WeightLbs:Jumping + WeightLbs:Strength + wage_k_eu:Age:heightInch + 
+    wage_k_eu:Age:WeightLbs + Age:heightInch:WeightLbs, data = fifa_trn_data2)
+    
+Since we have so many predictors and interactions between predictors, we are not going for transformations and polynomial regression, that will make the model very complex.
+
+# Results
+
+We will compare the result of bp-test, Shapiro-Wilk test, LOOCV-rmse between different models derived from above methods:
+
+```{r}
+#Model Comparison based on Adjusted RMSE, loocv_RMSE,Shapiro Wilk and BP test
+
+calc_RMSE = function(origin_data,predicted_data) {
+      sqrt(mean((origin_data - predicted_data)^2))
+  }
+
+calc_loocv_rmse = function(model){
+  sqrt(mean((resid(model)/(1-hatvalues(model)))^2))
+}
+
+FIFA_train_clean_data = fifa_trn_data2
+FIFA_test_data = fifa_tst_data # 85% of origanl dataset
+
+#Basic Model
+basic_model = lm(Overall ~  Age+ rel_tot_value_k + value_k_eu + wage_k_eu + PreferredFoot+ WeakFoot
+                            + SkillMoves+  heightInch	+ WeightLbs	+ Crossing	+ Finishing	+ HeadingAccuracy	+ ShortPassing	+ Volleys	+ Dribbling	+ Curve	+ FKAccuracy	                 + LongPassing	+ BallControl	+ Acceleration	+ SprintSpeed	+ Agility	+ Reactions	+ Balance	+ ShotPower	+                       Jumping	+ Stamina	+ Strength	+ LongShots	+ Aggression	+ Interceptions	+ Positioning	+ Vision	+ Penalties	+                   Composure	+ Marking	+ StandingTackle	+ SlidingTackle	+ GKDiving	+ GKHandling	+ GKKicking	+ GKPositioning	+                   GKReflexes + Age:( rel_tot_value_k + value_k_eu + wage_k_eu + PreferredFoot+ WeakFoot+ SkillMoves+  heightInch	                 + WeightLbs	+ Crossing	+ Finishing	+ HeadingAccuracy	+ ShortPassing	+ Volleys	+ Dribbling	+ Curve	+                         FKAccuracy	+ LongPassing	+ BallControl	+ Acceleration	+ SprintSpeed	+ Agility	+ Reactions	+ Balance	+                         ShotPower	+ Jumping	+ Stamina	+ Strength	+ LongShots	+ Aggression	+ Interceptions	+ Positioning	+ Vision	+                   Penalties	+ Composure	+ Marking	+ StandingTackle	+ SlidingTackle	+ GKDiving	+ GKHandling	+ GKKicking	+                       GKPositioning	+ GKReflexes) 
+                + heightInch:( rel_tot_value_k + value_k_eu + wage_k_eu + Age+ PreferredFoot+ WeakFoot+ SkillMoves+  heightInch	                + WeightLbs	+ Crossing	+ Finishing	+ HeadingAccuracy	+ ShortPassing	+ Volleys	+ Dribbling	+ Curve	+ FKAccuracy	                + LongPassing	+ BallControl	+ Acceleration	+ SprintSpeed	+ Agility	+ Reactions	+ Balance	+ ShotPower	+ Jumping	                + Stamina	+ Strength	+ LongShots	+ Aggression	+ Interceptions	+ Positioning	+ Vision	+ Penalties	+ Composure	                + Marking	+ StandingTackle	+ SlidingTackle	+ GKDiving	+ GKHandling	+ GKKicking	+ GKPositioning	+ GKReflexes) 
+                + WeightLbs:( rel_tot_value_k + value_k_eu + wage_k_eu + Age+ PreferredFoot+ WeakFoot+ SkillMoves+  heightInch	                + WeightLbs	+ Crossing	+ Finishing	+ HeadingAccuracy	+ ShortPassing	+ Volleys	+ Dribbling	+ Curve	+ FKAccuracy	                + LongPassing	+ BallControl	+ Acceleration	+ SprintSpeed	+ Agility	+ Reactions	+ Balance	+ ShotPower	+ Jumping	                + Stamina	+ Strength	+ LongShots	+ Aggression	+ Interceptions	+ Positioning	+ Vision	+ Penalties	+ Composure	                + Marking	+ StandingTackle	+ SlidingTackle	+ GKDiving	+ GKHandling	+ GKKicking	+ GKPositioning	+ GKReflexes)
+                + Age:heightInch:WeightLbs,data = fifa_trn_data)
+
+#Model with colinearity variables removed
+colinearity_removed_model = lm( Overall ~ wage_k_eu 
+                              + Age + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision                               + Penalties                               + Composure
+                              + wage_k_eu : ( Age + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision                               + Penalties                                + Composure )
+                              + Age:(wage_k_eu + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision                               + Penalties + Composure )
+                              + heightInch: (Age + wage_k_eu + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision                               + Penalties +Composure )
+                              + WeightLbs: (Age + wage_k_eu +  heightInch 
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision                               + Penalties                               +Composure )
+                              + wage_k_eu:Age:heightInch + wage_k_eu:Age:WeightLbs + Age:heightInch:WeightLbs +           
+                                wage_k_eu:Age:heightInch:WeightLbs,
+                              data = fifa_trn_data)
+
+#Model with influential / outlier points removed
+influ_out_removed_model    = lm( Overall ~ wage_k_eu 
+                              + Age + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision                               + Penalties                               + Composure
+                              + wage_k_eu : ( Age + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision                               + Penalties                                + Composure )
+                              + Age:(wage_k_eu + heightInch + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision                               + Penalties + Composure )
+                              + heightInch: (Age + wage_k_eu + WeightLbs  
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision                               + Penalties +Composure )
+                              + WeightLbs: (Age + wage_k_eu +  heightInch 
+                              + PreferredFoot + WeakFoot 
+                              + SkillMoves + Agility + Reactions + Balance + Jumping + Stamina + Strength + Aggression + Vision                               + Penalties                               +Composure )
+                              + wage_k_eu:Age:heightInch + wage_k_eu:Age:WeightLbs + Age:heightInch:WeightLbs +           
+                                wage_k_eu:Age:heightInch:WeightLbs,
+                              data = FIFA_train_clean_data)
+
+#Model based on backward AIC search  
+AIC_model = lm(formula = Overall ~ wage_k_eu + Age + heightInch + WeightLbs + 
+              PreferredFoot + WeakFoot + SkillMoves + Agility + Reactions + 
+              Balance + Jumping + Stamina + Strength + Aggression + Vision + 
+              Penalties + Composure + wage_k_eu:Age + wage_k_eu:heightInch + 
+              wage_k_eu:WeakFoot + wage_k_eu:SkillMoves + wage_k_eu:Agility + 
+              wage_k_eu:Reactions + wage_k_eu:Balance + wage_k_eu:Jumping + 
+              wage_k_eu:Strength + wage_k_eu:Aggression + wage_k_eu:Composure + 
+              Age:heightInch + Age:WeightLbs + Age:PreferredFoot + Age:Reactions + 
+              Age:Balance + Age:Strength + Age:Vision + Age:Composure + 
+              heightInch:WeightLbs + heightInch:PreferredFoot + heightInch:WeakFoot + 
+              heightInch:SkillMoves + heightInch:Reactions + heightInch:Balance + 
+              heightInch:Stamina + heightInch:Aggression + WeightLbs:Agility + 
+              WeightLbs:Reactions + WeightLbs:Jumping + WeightLbs:Stamina + 
+              WeightLbs:Strength + WeightLbs:Vision + WeightLbs:Penalties, 
+              data = FIFA_train_clean_data)
+
+#Model based on backward BIC search
+BIC_model = lm(formula = Overall ~ wage_k_eu + Age + heightInch + WeightLbs + 
+            PreferredFoot + SkillMoves + Agility + Reactions + Balance + 
+            Jumping + Stamina + Strength + Aggression + Vision + Penalties + 
+            Composure + wage_k_eu:Reactions + wage_k_eu:Composure + Age:PreferredFoot + 
+            Age:Reactions + Age:Balance + Age:Strength + Age:Vision + 
+            heightInch:WeightLbs + heightInch:SkillMoves + heightInch:Reactions + 
+            heightInch:Stamina + heightInch:Aggression + WeightLbs:Agility + 
+            WeightLbs:Jumping + WeightLbs:Penalties, data = FIFA_train_clean_data)
+
+#Computing the adjusted R2 for all the models
+r_2 = c(summary(basic_model)$adj.r.squared,summary(colinearity_removed_model)$adj.r.squared,
+        summary(influ_out_removed_model)$adj.r.squared,summary(AIC_model)$adj.r.squared,
+        summary(BIC_model)$adj.r.squared)
+
+#Computing the shapiro wilk test results for all the models
+shapiro = c(shapiro.test(resid(basic_model))$p.value,
+            shapiro.test(resid(colinearity_removed_model))$p.value,
+            shapiro.test(resid(influ_out_removed_model))$p.value,
+            shapiro.test(resid(AIC_model))$p.value,
+            shapiro.test(resid(BIC_model))$p.value)
+
+#Computing the bp Test results for all the models 
+bp_test = c(bptest(basic_model)$p.value,
+            bptest(colinearity_removed_model)$p.value,
+            bptest(influ_out_removed_model)$p.value,
+            bptest(AIC_model)$p.value,
+            bptest(BIC_model)$p.value
+            ) 
+#Computing the LOOCV RMSE for all the models
+loocv_rmse = c(calc_loocv_rmse(basic_model),calc_loocv_rmse(colinearity_removed_model),calc_loocv_rmse(influ_out_removed_model),calc_loocv_rmse(AIC_model),calc_loocv_rmse(BIC_model))
+
+Model_name = c("Basic Model", "Colinearity Removed", "Influ/Outlier removed", "AIC", "BIC")
+results = data.frame(Model_name ,r_2, shapiro, bp_test, loocv_rmse)
+colnames(results) = c("Model",expression(R^2), "Normality", "Constant Variance", "RMSE (LOOCV)")
+flextable(results)
+```
+
+Based on the above model comparison, Model AIC is the best model since it has the higher adjusted $R^2$, normal distribution and low RMSE LOOCV.
+
+
+# Discussion
+
+We will validate our model on test data which we created as 85% of the dataset.
+We will calculate RMSE and check the result:
+
+```{r}
+## Test Validation 
+
+rsme_trn_basic = sqrt( (mean(((fifa_trn_data$Overall -  predict(basic_model, newdata=fifa_trn_data)))^2)))
+rsme_tst_basic = sqrt( (mean(((fifa_tst_data$Overall -  predict(basic_model, newdata=fifa_tst_data)))^2)))
+
+rsme_trn_col = sqrt( (mean(((fifa_trn_data$Overall -  predict(colinearity_removed_model, newdata=fifa_trn_data)))^2)))
+rsme_tst_col = sqrt( (mean(((fifa_tst_data$Overall -  predict(colinearity_removed_model, newdata=fifa_tst_data)))^2)))
+
+rsme_trn_inf = sqrt( (mean(((fifa_trn_data$Overall -  predict(influ_out_removed_model, newdata=fifa_trn_data)))^2)))
+rsme_tst_inf = sqrt( (mean(((fifa_tst_data$Overall -  predict(influ_out_removed_model, newdata=fifa_tst_data)))^2)))
+
+rsme_trn_aic = sqrt( (mean(((fifa_trn_data$Overall -  predict(AIC_model, newdata=fifa_trn_data)))^2)))
+rsme_tst_aic = sqrt( (mean(((fifa_tst_data$Overall -  predict(AIC_model, newdata=fifa_tst_data)))^2)))
+
+rsme_trn_bic = sqrt( (mean(((fifa_trn_data$Overall -  predict(BIC_model, newdata=fifa_trn_data)))^2)))
+rsme_tst_bic = sqrt( (mean(((fifa_tst_data$Overall -  predict(BIC_model, newdata=fifa_tst_data)))^2)))
+
+rmse_data = data.frame(
+  model_name = c("Basic Model","Colinearity removed","Influential Removed", "BIC", "AIC"),
+  train_rsme = c(rsme_trn_basic,rsme_trn_col,rsme_trn_inf,rsme_trn_aic,rsme_trn_bic),
+  test_rsme = c(rsme_tst_basic,rsme_tst_col,rsme_tst_inf,rsme_tst_aic,rsme_tst_bic),
+  diff_rmse = c(rsme_trn_basic-rsme_tst_basic,rsme_trn_col-rsme_tst_col,rsme_trn_inf-rsme_tst_inf,rsme_trn_aic-rsme_tst_aic,rsme_trn_bic-rsme_tst_bic)
+)
+
+train_rsme = c(rsme_trn_basic,rsme_trn_col,rsme_trn_inf,rsme_trn_aic,rsme_trn_bic)
+test_rsme = c(rsme_tst_basic,rsme_tst_col,rsme_tst_inf,rsme_tst_aic,rsme_tst_bic)
+diff_rmse = c(rsme_trn_basic-rsme_tst_basic,rsme_trn_col-rsme_tst_col,rsme_trn_inf-rsme_tst_inf,rsme_trn_aic-rsme_tst_aic,rsme_trn_bic-rsme_tst_bic)
+
+Model_name = c("Basic Model","Colinearity removed","Influential Removed", "AIC", "BIC")
+results = data.frame(Model_name ,train_rsme, test_rsme, diff_rmse)
+colnames(results) = c("Model","Train RMSE","Test RMSE","Train - Test RMSE")
+flextable(results)
+```
+
+Based on RMSE we see that model AIC has lowest RMSE difference(-0.128) between training and test data between the model which passes normality.
+Next we will see few predicted overall on test data using model_aic.
+
+```{r}
+
+predicted_test = predict(model_aic,fifa_tst_data)
+predicted_data = data.frame(original_Overall = fifa_tst_data$Overall, predicted_overall=predicted_test, difference=(fifa_tst_data$Overall - predicted_test))
+sample_test_indx= sample(nrow(predicted_data), size = trunc(0.01 * nrow(predicted_data)))
+sample_test_predicted_data=predicted_data[sample_test_indx,]
+#View(sample_test_predicted_data)
+head(sample_test_predicted_data, n=10)
+
+```
+
+We were able to find a model that is able to satisfy  high adjusted R^2,Normality and low RMSE though the model didn't satisfy the constant variance assumption. Given the fact the residual vs. fitted plot looks good for the model and also the dataset is very huge the constance variance is not getting satisfied in any model so we were able to find a model that can only satisfy R^2, Normality and LOOCV RMSE.
+
+We had to apply a variance stabilizing transformation, but we have normality and closer to constant variance. Also We don't have issues with collinearity as we have removed the colinear variables from the model. We feel the constant variance is not satisfied due to lot of noise data in the data set.We removed the NA,influential and outliers data points from the data set by still the noise data is causing the constant variance to be not satisfied.Overall we feel the above model is a good predictive model for the football analystics dataset and our test validation of train vs. test RMSE results look good.
+
+The theme of this class has been, 'All models are wrong, some are useful'. This summarizes what we discovered in this project.
+
+# Appendix
+
+Model Summaries:
+
+```{r}
+summary(model_aic)
+```
+
+```{r}
+summary(model_bic)
+
+```
+
+```{r}
+summary(model_init)
+```
+
+***
+
