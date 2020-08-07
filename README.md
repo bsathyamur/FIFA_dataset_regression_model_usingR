@@ -56,9 +56,9 @@ Check the collinearity of the predictors to find best useful predictors using va
 #### Step 1
 Perform ANOVA test between MODEL 1 and MODEL 2
 
-##   Res.Df   RSS Df Sum of Sq  F Pr(>F)    
-## 1   2704 25416                           
-## 2   2642 19483 62      5933 13 <2e-16 ***
+     Res.Df   RSS   Df      Sum of Sq  F  Pr(>F)    
+ 1   2704     25416                           
+ 2   2642     19483 62      5933       13 <2e-16 ***
 
 #### Inference
 Based on the anova test, the larger model after removing collinearity is significant
