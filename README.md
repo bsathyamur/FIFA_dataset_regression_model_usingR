@@ -58,9 +58,7 @@ Check the collinearity of the predictors to find best useful predictors using va
 #### Step 1
 Perform ANOVA test between MODEL 1 and MODEL 2
 
-     Res.Df   RSS   Df      Sum of Sq  F  Pr(>F)    
- 1   2704     25416                           
- 2   2642     19483 62      5933       13 <2e-16 ***
+![anova1](https://github.com/bsathyamur/FIFA_dataset_regression_model_usingR/blob/master/ANOVA-1.png)
 
 #### Inference
 Based on the anova test, the larger model after removing collinearity is significant
@@ -117,9 +115,7 @@ Shapiro Wilk test is passed now which suggests normality whereas the BP test is 
 #### Step 8
 Performing ANOVA test for MODEL-2 (with influential and outlier data points) and MODEL-3 (without influential and outlier data points)
 
-   Res.Df   RSS Df Sum of Sq    F Pr(>F)    
- 1   2520 18890                             
- 2   2458 13682 62      5208 15.1 <2e-16 ***
+![anova1](https://github.com/bsathyamur/FIFA_dataset_regression_model_usingR/blob/master/ANOVA-2.png)
  
  #### Inference
  The anova test suggests the larger model is significant.
