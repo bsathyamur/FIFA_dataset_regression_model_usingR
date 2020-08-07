@@ -142,14 +142,7 @@ We will validate our model on test data which we created as 85% of the dataset. 
 
 Based on RMSE we see that model AIC has lowest RMSE difference(-0.128) between training and test data between the model which passes normality. Next we will see few predicted overall on test data using model_aic.
 
-### CONCLUSION
-We were able to find a model that is able to satisfy high adjusted R^2,Normality and low RMSE though the model didn’t satisfy the constant variance assumption. Given the fact the residual vs. fitted plot looks good for the model and also the dataset is very huge the constance variance is not getting satisfied in any model so we were able to find a model that can only satisfy R^2, Normality and LOOCV RMSE.
-
-We had to apply a variance stabilizing transformation, but we have normality and closer to constant variance. Also We don’t have issues with collinearity as we have removed the colinear variables from the model. We feel the constant variance is not satisfied due to lot of noise data in the data set.We removed the NA,influential and outliers data points from the data set by still the noise data is causing the constant variance to be not satisfied.Overall we feel the above model is a good predictive model for the football analystics dataset and our test validation of train vs. test RMSE results look good.
-
-The theme of this class has been, "All models are wrong, some are useful". This summarizes what we discovered in this project.
-
-       original_Overall predicted_overall difference
+original_Overall predicted_overall difference
  7962                67             65.92    1.07759
  1418                76             76.53   -0.53270
  2590                74             77.01   -3.01259
@@ -160,6 +153,14 @@ The theme of this class has been, "All models are wrong, some are useful". This 
  2371                74             73.93    0.07488
  11585               64             67.67   -3.67017
  13875               62             61.47    0.52756
+
+
+### CONCLUSION
+We were able to find a model that is able to satisfy high adjusted R^2,Normality and low RMSE though the model didn’t satisfy the constant variance assumption. Given the fact the residual vs. fitted plot looks good for the model and also the dataset is very huge the constance variance is not getting satisfied in any model so we were able to find a model that can only satisfy R^2, Normality and LOOCV RMSE.
+
+We had to apply a variance stabilizing transformation, but we have normality and closer to constant variance. Also We don’t have issues with collinearity as we have removed the colinear variables from the model. We feel the constant variance is not satisfied due to lot of noise data in the data set.We removed the NA,influential and outliers data points from the data set by still the noise data is causing the constant variance to be not satisfied.Overall we feel the above model is a good predictive model for the football analystics dataset and our test validation of train vs. test RMSE results look good.
+
+The theme of this class has been, "All models are wrong, some are useful". This summarizes what we discovered in this project.
 
 
 
