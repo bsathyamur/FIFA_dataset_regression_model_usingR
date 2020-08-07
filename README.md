@@ -90,7 +90,35 @@ nrow(fifa_trn_data2)
 #### Inference
 2674 data points removed from the data set
 
-#### Building a new model using the dataset with influential and outliers points removed - MODEL 3
+#### Step 5
+Build the model (MODEL-2) using the dataset with influential and outliers points removed
+
+#### Step 6
+we will check the variance and normality of the model with the new dataset
+
+#### Inference
+The Fitted vs. Residuals and Normal QQ plots are better now.
+
+#### Step 7
+Perform BP Test and Shapiro Wilk Test
+
+BP Test (p-value) = 2.169310^{-6}
+Shapiro Wilk test (p-value) = 0.5202
+
+#### Inference
+Shapiro Wilk test is passed now which suggests normality whereas the BP test is getting failed. Since it is a large dataset, we are making an assumption based on the fitted vs. residual that its of equal variance.
+
+#### Step 8
+Performing ANOVA test for MODEL-2 (with influential and outlier data points) and MODEL-3 (without influential and outlier data points)
+
+   Res.Df   RSS Df Sum of Sq    F Pr(>F)    
+ 1   2520 18890                             
+ 2   2458 13682 62      5208 15.1 <2e-16 ***
+ 
+ #### Inference
+ The anova test suggests the larger model is significant.
+ 
+ 
 
 
 
