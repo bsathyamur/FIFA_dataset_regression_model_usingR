@@ -38,6 +38,8 @@ We reject the null hypothesis and prefer the larger complex model.
 #### Step 2: 
 Check the variance and normality of the complex model
 
+![plot1](https://github.com/bsathyamur/FIFA_dataset_regression_model_usingR/blob/master/plot1.png)
+
 #### Inference: 
 The Fitted vs. Residuals and Normal QQ plots are not ok.
 
@@ -69,6 +71,8 @@ We will again check the variance and normality of VIF MODEL - MODEL 2
 #### Inference
 The Fitted vs. Residuals and Normal QQ plots are not ok.
 
+![plot2](https://github.com/bsathyamur/FIFA_dataset_regression_model_usingR/blob/master/plot2.png)
+
 #### Step 3
 Perform  BP Test and Shapiro Wilk Test
 
@@ -95,6 +99,8 @@ Build the model (MODEL-2) using the dataset with influential and outliers points
 
 #### Step 6
 we will check the variance and normality of the model with the new dataset
+
+![plot3](https://github.com/bsathyamur/FIFA_dataset_regression_model_usingR/blob/master/plot3.png)
 
 #### Inference
 The Fitted vs. Residuals and Normal QQ plots are better now.
