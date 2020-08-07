@@ -129,27 +129,18 @@ Performing ANOVA test for MODEL-2 (with influential and outlier data points) and
 ### Results
 We will compare the result of bp-test, Shapiro-Wilk test, LOOCV-rmse between different models derived from above methods:
 
+![model-comp](https://github.com/bsathyamur/FIFA_dataset_regression_model_usingR/blob/master/model-comp.png)
 
 Based on the above model comparison, Model AIC is the best model since it has the higher adjusted R2, normal distribution and low RMSE LOOCV.
 
 ### Validation
 We will validate our model on test data which we created as 85% of the dataset. We will calculate RMSE and check the result:
 
+![model-comp](https://github.com/bsathyamur/FIFA_dataset_regression_model_usingR/blob/master/model-testRMSE-comp.png)
 
 Based on RMSE we see that model AIC has lowest RMSE difference(-0.128) between training and test data between the model which passes normality. Next we will see few predicted overall on test data using model_aic.
 
-original_Overall predicted_overall difference
- 7962                67             65.92    1.07759
- 1418                76             76.53   -0.53270
- 2590                74             77.01   -3.01259
- 1425                76             73.83    2.16804
- 9984                65             63.87    1.13305
- 678                 79             72.45    6.55054
- 5513                70             67.43    2.56544
- 2371                74             73.93    0.07488
- 11585               64             67.67   -3.67017
- 13875               62             61.47    0.52756
-
+![model-comp](https://github.com/bsathyamur/FIFA_dataset_regression_model_usingR/blob/master/prediction.png)
 
 ### CONCLUSION
 We were able to find a model that is able to satisfy high adjusted R^2,Normality and low RMSE though the model didn’t satisfy the constant variance assumption. Given the fact the residual vs. fitted plot looks good for the model and also the dataset is very huge the constance variance is not getting satisfied in any model so we were able to find a model that can only satisfy R^2, Normality and LOOCV RMSE.
